@@ -1,6 +1,5 @@
+![pizzagif (2)](https://github.com/user-attachments/assets/f0047189-9714-4f50-bb11-790bf038110c)
 ## OUTPUT
-
-[Watch Full Video](pizza.mp4)
 
 Brief Summary:
 --------------------------------------------------
