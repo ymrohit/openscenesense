@@ -1,6 +1,6 @@
 ## OUTPUT
 
-[Watch Full Video](Examples/pizza.mp4)
+[Watch Full Video](pizza.mp4)
 
 Brief Summary:
 --------------------------------------------------
