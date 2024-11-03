@@ -2,6 +2,23 @@
 
 **OpenSceneSense** is a cutting-edge Python package that revolutionizes video analysis by seamlessly integrating OpenAI and OpenRouter Vision models. Unlock the full potential of your videos with advanced frame analysis, audio transcription, dynamic frame selection, and comprehensive summaries all powered by state-of-the-art AI.
 
+## Table of Contents
+
+1. [🚀 Why OpenSceneSense?](#-why-openscenesense)
+2. [🌟 Features](#-features)
+3. [📦 Installation](#-installation)
+4. [🔑 Setting Up API Keys](#-setting-up-api-keys)
+5. [🛠️ Usage](#-usage)
+6. [🎯 The Power of Prompts in OpenSceneSense](#-the-power-of-prompts-in-openscenesense)
+7. [📈 Applications](#-applications)
+8. [🚀 Future Upgrades: What's Next for OpenSceneSense?](#-future-upgrades-whats-next-for-openscenesense)
+9. [🌐 OpenSceneSense and the Future of Content Moderation](#-openscenesense-and-the-future-of-content-moderation)
+10. [🛠️ Contributing](#-contributing)
+11. [📄 License](#-license)
+12. [📬 Contact](#-contact)
+13. [📄 Additional Resources](Docs/prompts.md)
+
+
 ## 🚀 Why OpenSceneSense?
 
 OpenSceneSense isn't just another video analysis library, it's a gateway to a new era of video-based applications and innovations. By enabling large language models (LLMs) to process and understand video inputs, OpenSceneSense empowers developers, researchers, and creators to build intelligent video-centric solutions like never before.
@@ -244,18 +261,7 @@ By leveraging powerful prompts and contextual tags, OpenSceneSense can provide i
 
 With prompt-driven analysis, OpenSceneSense can become your intelligent partner in interpreting video content, whether for content moderation, dataset creation, or building interactive applications that respond to visual and audio cues naturally.
 
-## 📚 Comprehensive Documentation
-
-### **Classes**
-
-- **`ModelConfig`**: Configure the vision, text, and audio models for analysis.
-- **`AnalysisPrompts`**: Customize prompts for frame analysis, detailed summaries, and brief summaries.
-- **`VideoAnalyzer` / `OpenRouterAnalyzer`**: Main classes for analyzing videos using OpenAI and OpenRouter APIs.
-- **`DynamicFrameSelector`**: Optimize frame selection based on dynamic criteria.
-
-### **Methods**
-
-- **`analyze_video(video_path)`**: Analyze the specified video and return a comprehensive dictionary containing summaries, timeline, and metadata.
+For a comprehensive list of innovative video analysis prompts, refer to the [Prompt Examples](docs/InnovativeVideoAnalysisPrompts.md).
 
 ## 📈 Applications
 
@@ -323,6 +329,4 @@ For questions, suggestions, or support, feel free to reach out:
 - **Email:** mahendrarohittigon@gmail.com
 - **GitHub Issues:** [OpenSceneSense Issues](https://github.com/ymrohit/openscenesense/issues)
 
----
 
-Harness the power of AI-driven video analysis with **OpenSceneSense**—where your videos come to life with intelligence!
