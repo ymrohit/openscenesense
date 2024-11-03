@@ -1,0 +1,37 @@
+[
+build-system
+]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[
+project
+]
+name = "openscenesense"
+version = "1.0.0"
+authors = [
+    { name="Rohit Yelukati", email="mahendrarohittigon@gmail.com" },
+]
+description = "A video analysis toolkit using OpenAI and Openrouter vision models"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "openai>=1.53.0",
+    "numpy>=2.0.2",
+    "opencv-python>=4.10.0",
+    "Pillow>=11.0.0",
+    "librosa>=0.10.2.post1",
+    "soundfile>=0.12.0",
+    "ffmpeg-python>=0.2.0"  # Added ffmpeg-python dependency
+]
+
+[
+project.urls
+]
+"Homepage" = "https://github.com/ymrohit/openscenesense"
+"Bug Tracker" = "https://github.com/ymrohit/openscenesense/issues"
