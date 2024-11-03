@@ -1,5 +1,6 @@
 from src.openscenesense.models import ModelConfig, Frame, AudioSegment, AnalysisPrompts, SceneType
 from src.openscenesense.analyzer import VideoAnalyzer
+from src.openscenesense.openrouter_analyzer import OpenRouterAnalyzer
 from src.openscenesense.frame_selectors import FrameSelector, DynamicFrameSelector, UniformFrameSelector
 
 import subprocess
@@ -18,10 +19,11 @@ def check_ffmpeg():
 if not check_ffmpeg():
     raise RuntimeError("FFmpeg is required but not found on the system.")
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 
 __all__ = [
     'VideoAnalyzer',
+    'OpenRouterAnalyzer',
     'ModelConfig',
     'Frame',
     'AudioSegment',
