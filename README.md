@@ -269,8 +269,6 @@ OpenSceneSense is not just a tool—it's a foundation for building innovative vi
 
 ## 🚀 Future Upgrades: What's Next for OpenSceneSense?
 
-As we continue developing OpenSceneSense, we're excited to share some of the most impactful upgrades planned for future versions. Each improvement will bring us closer to creating the ultimate tool for video-based AI applications.
-
 ### **Top 5 Potential Future Upgrades**
 
 1. **Real-Time Video Analysis**  
