@@ -10,7 +10,7 @@ project
 name = "openscenesense"
 version = "1.0.0"
 authors = [
-    { name="Rohit Yelukati", email="mahendrarohittigon@gmail.com" },
+    { name="Rohit Yelukati Mahendra", email="mahendrarohittigon@gmail.com" },
 ]
 description = "A video analysis toolkit using OpenAI and Openrouter vision models"
 readme = "README.md"
