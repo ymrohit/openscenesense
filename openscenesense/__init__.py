@@ -19,7 +19,7 @@ def check_ffmpeg():
 if not check_ffmpeg():
     raise RuntimeError("FFmpeg is required but not found on the system.")
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 
 __all__ = [
     'VideoAnalyzer',
