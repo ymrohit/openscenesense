@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openscenesense"
-version = "1.0.0"
+version = "1.0.1"
 authors = [
     { name = "Rohit Yelukati Mahendra", email = "mahendrarohittigon@gmail.com" },
 ]
@@ -25,6 +25,9 @@ dependencies = [
     "soundfile>=0.12.0",
     "ffmpeg-python>=0.2.0"
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["openscenesense"]
 
 [project.urls]
 Homepage = "https://github.com/ymrohit/openscenesense"
