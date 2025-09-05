@@ -13,8 +13,8 @@ def main():
     try:
         # Example of using OpenRouter models
         custom_models = ModelConfig(
-            vision_model="meta-llama/llama-3.2-90b-vision-instruct:free",  # OpenRouter vision model
-            text_model="meta-llama/llama-3.2-3b-instruct:free",  # OpenRouter text model
+            vision_model="qwen/qwen2.5-vl-32b-instruct:free",  # Proven free vision model on OpenRouter
+            text_model="meta-llama/llama-3.2-3b-instruct:free",  # Reliable free text model
             audio_model="whisper-1"  # Whisper model remains the same
         )
 

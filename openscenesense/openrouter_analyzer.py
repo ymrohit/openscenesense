@@ -20,7 +20,8 @@ class OpenRouterAnalyzer(VideoAnalyzer):
             prompts: Optional[AnalysisPrompts] = None,
             log_level: int = logging.INFO,
             http_referer: Optional[str] = None,
-            app_title: Optional[str] = None
+            app_title: Optional[str] = None,
+            max_workers: int = 5,
     ):
         """
         Initialize the OpenRouter video analyzer.
@@ -47,7 +48,8 @@ class OpenRouterAnalyzer(VideoAnalyzer):
             max_frames=max_frames,
             frames_per_minute=frames_per_minute,
             prompts=prompts,
-            log_level=log_level
+            log_level=log_level,
+            max_workers=max_workers,
         )
 
         # Create separate OpenAI client for audio

@@ -15,11 +15,15 @@ def check_ffmpeg():
         print("Installation instructions can be found in the package README.", file=sys.stderr)
         return False
 
-# Add this check at package initialization or before video processing
-if not check_ffmpeg():
-    raise RuntimeError("FFmpeg is required but not found on the system.")
+# Light check at import time; warn but don't raise to keep package importable
+try:
+    if not check_ffmpeg():
+        print("Warning: FFmpeg not found. Audio transcription may be unavailable.", file=sys.stderr)
+except Exception:
+    # Never fail import due to environment checks
+    pass
 
-__version__ = "1.0.2"
+__version__ = "1.1.0"
 
 __all__ = [
     'VideoAnalyzer',

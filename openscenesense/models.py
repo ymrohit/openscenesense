@@ -13,8 +13,11 @@ class SceneType(Enum):
 @dataclass
 class ModelConfig:
     """Configuration for OpenAI models"""
-    vision_model: str = "gpt-4-vision-preview"
-    text_model: str = "gpt-4-turbo-preview"
+    # Defaults updated to current production models
+    # vision_model and text_model can be the same multimodal model
+    vision_model: str = "gpt-4o"
+    text_model: str = "gpt-4o-mini"
+    # Default to Whisper for segment-rich transcripts
     audio_model: str = "whisper-1"
 
 

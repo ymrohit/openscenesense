@@ -14,6 +14,7 @@ import os
 import soundfile as sf
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import ffmpeg
 
 
 class VideoAnalyzerError(Exception):
@@ -48,7 +49,8 @@ class VideoAnalyzer:
             prompts: Optional[AnalysisPrompts] = None,
             log_level: int = logging.INFO,
             base_url: Optional[str] = None,
-            organization: Optional[str] = None
+            organization: Optional[str] = None,
+            max_workers: int = 5,
     ):
         """
         Initialize the VideoAnalyzer with configurable models and parameters.
@@ -81,6 +83,7 @@ class VideoAnalyzer:
         self.max_frames = max_frames
         self.frames_per_minute = frames_per_minute
         self.prompts = prompts or AnalysisPrompts()
+        self.max_workers = max(1, int(max_workers))
 
         self.logger.info(f"Initialized VideoAnalyzer with:"
                          f"\n - Frame selector: {self.frame_selector.__class__.__name__}"
@@ -122,6 +125,8 @@ class VideoAnalyzer:
 
         try:
             client = OpenAI(**client_kwargs)
+            # Track if using OpenRouter, which may not support Responses API
+            self._is_openrouter = bool(base_url and "openrouter.ai" in str(base_url))
             self.logger.debug("OpenAI client initialized successfully.")
             return client
         except Exception as e:
@@ -185,6 +190,45 @@ class VideoAnalyzer:
             self.logger.error(f"Scene change detection failed: {str(e)}")
             raise VideoAnalysisError("Scene change detection failed.") from e
 
+    def _extract_audio_wav(self, video_path: str) -> Optional[str]:
+        """Extract audio to a 16kHz mono WAV file using ffmpeg.
+
+        Returns the temp file path on success, or None if extraction fails.
+        """
+        try:
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
+                temp_path = tmp.name
+            (
+                ffmpeg
+                .input(video_path)
+                .output(temp_path, ac=1, ar=16000, format='wav', vn=None)
+                .overwrite_output()
+                .run(quiet=True)
+            )
+            return temp_path
+        except Exception as e:
+            self.logger.debug(f"ffmpeg extraction failed (will fall back to librosa): {e}")
+            try:
+                if 'temp_path' in locals() and os.path.exists(temp_path):
+                    os.unlink(temp_path)
+            except Exception:
+                pass
+            return None
+
+    def _has_audio_stream(self, video_path: str) -> bool:
+        """Detect if the video contains an audio stream using ffprobe.
+
+        Returns True if at least one audio stream exists; if probing fails,
+        returns True (best-effort to not block transcription attempts).
+        """
+        try:
+            info = ffmpeg.probe(video_path)
+            streams = info.get('streams', [])
+            return any(s.get('codec_type') == 'audio' for s in streams)
+        except Exception as e:
+            self.logger.debug(f"ffprobe failed to inspect audio streams: {e}")
+            return True
+
     def _transcribe_audio(self, video_path: str) -> List[AudioSegment]:
         """
         Transcribe audio from video using the selected Whisper model.
@@ -196,35 +240,51 @@ class VideoAnalyzer:
             List of transcribed audio segments.
         """
         try:
-            self.logger.info("Extracting audio from video...")
-            audio_array, sr = librosa.load(video_path, sr=16000)
+            # Short-circuit if no audio present
+            if not self._has_audio_stream(video_path):
+                self.logger.info("No audio stream detected; skipping transcription.")
+                return []
 
-            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_audio:
-                temp_path = temp_audio.name
-                self.logger.debug(f"Saving temporary audio file to {temp_path}")
-                sf.write(temp_path, audio_array, sr, format='WAV')
+            self.logger.info("Extracting audio from video...")
+            temp_path = self._extract_audio_wav(video_path)
+
+            # Fallback to librosa if ffmpeg extraction fails
+            if temp_path is None:
+                audio_array, sr = librosa.load(video_path, sr=16000)
+                with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_audio:
+                    temp_path = temp_audio.name
+                    self.logger.debug(f"Saving temporary audio file to {temp_path} (librosa fallback)")
+                    sf.write(temp_path, audio_array, sr, format='WAV')
 
             try:
-                self.logger.info("Transcribing audio with Whisper API...")
+                self.logger.info("Transcribing audio via speech-to-text API...")
+                # Choose response format based on model capabilities
+                model_lc = (self.model_config.audio_model or "").lower()
+                # Whisper supports 'verbose_json' with segments; newer models typically support 'json' or 'text'
+                resp_format = "verbose_json" if "whisper" in model_lc else "json"
                 with open(temp_path, 'rb') as audio_file:
                     response = self.client.audio.transcriptions.create(
                         model=self.model_config.audio_model,
                         file=audio_file,
-                        response_format="verbose_json"
+                        response_format=resp_format
                     )
 
-                segments = []
-                if hasattr(response, 'segments'):
+                segments: List[AudioSegment] = []
+                if hasattr(response, 'segments') and response.segments:
                     for segment in response.segments:
                         segments.append(AudioSegment(
-                            text=segment.text,
-                            start_time=segment.start,
-                            end_time=segment.end,
-                            confidence=segment.confidence if hasattr(segment, 'confidence') else 1.0
+                            text=getattr(segment, 'text', ''),
+                            start_time=getattr(segment, 'start', 0.0),
+                            end_time=getattr(segment, 'end', 0.0),
+                            confidence=getattr(segment, 'confidence', 1.0)
                         ))
                 else:
+                    # For non-verbose formats, extract overall text
+                    text_value = getattr(response, 'text', None)
+                    if not text_value and hasattr(response, 'output_text'):
+                        text_value = response.output_text
                     segments.append(AudioSegment(
-                        text=response.text if hasattr(response, 'text') else str(response),
+                        text=text_value or str(response),
                         start_time=0.0,
                         end_time=0.0,
                         confidence=1.0
@@ -235,19 +295,18 @@ class VideoAnalyzer:
 
             except Exception as e:
                 self.logger.error(f"Audio transcription failed: {str(e)}")
-                #raise AudioTranscriptionError("Audio transcription failed.") from e
                 return []
 
             finally:
                 try:
-                    os.unlink(temp_path)
-                    self.logger.debug("Temporary audio file deleted successfully.")
+                    if temp_path and os.path.exists(temp_path):
+                        os.unlink(temp_path)
+                        self.logger.debug("Temporary audio file deleted successfully.")
                 except Exception as e:
                     self.logger.warning(f"Failed to delete temporary audio file: {str(e)}")
 
         except Exception as e:
             self.logger.error(f"Audio extraction failed: {str(e)}")
-            #raise AudioTranscriptionError("Audio extraction failed.") from e
             return []
 
     def _analyze_frame(self, frame: Frame) -> Dict:
@@ -266,33 +325,60 @@ class VideoAnalyzer:
 
             base64_image = self._frame_to_base64(frame.image)
 
-            response = self.client.chat.completions.create(
-                model=self.model_config.vision_model,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": self.prompts.frame_analysis},
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{base64_image}"
+            description = None
+            if getattr(self, "_is_openrouter", False):
+                # OpenRouter: stick to chat.completions endpoint
+                response = self.client.chat.completions.create(
+                    model=self.model_config.vision_model,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": self.prompts.frame_analysis},
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}
                                 }
+                            ]
+                        }
+                    ],
+                    max_tokens=300
+                )
+                if not response or not response.choices:
+                    raise FrameAnalysisError("Received empty response or choices from API.")
+                description = response.choices[0].message.content
+            else:
+                # Prefer modern Responses API (OpenAI)
+                try:
+                    response = self.client.responses.create(
+                        model=self.model_config.vision_model,
+                        input=[{
+                            "role": "user",
+                            "content": [
+                                {"type": "input_text", "text": self.prompts.frame_analysis},
+                                {"type": "input_image", "image_url": f"data:image/jpeg;base64,{base64_image}"}
+                            ]
+                        }]
+                    )
+                    description = getattr(response, 'output_text', None)
+                except Exception as e:
+                    self.logger.debug(f"Responses API failed for vision; falling back to chat.completions: {e}")
+                    response = self.client.chat.completions.create(
+                        model=self.model_config.vision_model,
+                        messages=[
+                            {
+                                "role": "user",
+                                "content": [
+                                    {"type": "text", "text": self.prompts.frame_analysis},
+                                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                                ]
                             }
-                        ]
-                    }
-                ],
-                max_tokens=300
-            )
-
-            if not response or not response.choices:
-                raise FrameAnalysisError("Received empty response or choices from API.")
-
-            message = response.choices[0].message
-            if not hasattr(message, 'content'):
-                raise FrameAnalysisError("Response message does not contain 'content' attribute.")
-
-            description = message.content
+                        ],
+                        max_tokens=300
+                    )
+                    if not response or not response.choices:
+                        raise FrameAnalysisError("Received empty response or choices from API.")
+                    description = response.choices[0].message.content
             if not description:
                 raise FrameAnalysisError("No content found in response message.")
 
@@ -335,36 +421,81 @@ class VideoAnalyzer:
         ) if audio_segments else "No audio transcript available."
 
         try:
-            # Generate detailed summary
-            detailed_response = self.client.chat.completions.create(
-                model=self.model_config.text_model,
-                messages=[{
-                    "role": "user",
-                    "content": self.prompts.detailed_summary.format(
+            if getattr(self, "_is_openrouter", False):
+                detailed_response = self.client.chat.completions.create(
+                    model=self.model_config.text_model,
+                    messages=[{
+                        "role": "user",
+                        "content": self.prompts.detailed_summary.format(
+                            duration=video_duration,
+                            timeline=timeline,
+                            transcript=transcript
+                        )
+                    }]
+                )
+                brief_response = self.client.chat.completions.create(
+                    model=self.model_config.text_model,
+                    messages=[{
+                        "role": "user",
+                        "content": self.prompts.brief_summary.format(
+                            duration=video_duration,
+                            timeline=timeline,
+                            transcript=transcript
+                        )
+                    }]
+                )
+                detailed_text = detailed_response.choices[0].message.content
+                brief_text = brief_response.choices[0].message.content
+            else:
+                detailed_resp = self.client.responses.create(
+                    model=self.model_config.text_model,
+                    input=self.prompts.detailed_summary.format(
                         duration=video_duration,
                         timeline=timeline,
                         transcript=transcript
                     )
-                }]
-            )
-
-            # Generate brief summary
-            brief_response = self.client.chat.completions.create(
-                model=self.model_config.text_model,
-                messages=[{
-                    "role": "user",
-                    "content": self.prompts.brief_summary.format(
+                )
+                brief_resp = self.client.responses.create(
+                    model=self.model_config.text_model,
+                    input=self.prompts.brief_summary.format(
                         duration=video_duration,
                         timeline=timeline,
                         transcript=transcript
                     )
-                }]
-            )
+                )
+                detailed_text = getattr(detailed_resp, 'output_text', None) or ""
+                brief_text = getattr(brief_resp, 'output_text', None) or ""
+                if not detailed_text or not brief_text:
+                    self.logger.debug("Responses output missing; falling back to chat.completions.")
+                    detailed_response = self.client.chat.completions.create(
+                        model=self.model_config.text_model,
+                        messages=[{
+                            "role": "user",
+                            "content": self.prompts.detailed_summary.format(
+                                duration=video_duration,
+                                timeline=timeline,
+                                transcript=transcript
+                            )
+                        }]
+                    )
+                    brief_response = self.client.chat.completions.create(
+                        model=self.model_config.text_model,
+                        messages=[{
+                            "role": "user",
+                            "content": self.prompts.brief_summary.format(
+                                duration=video_duration,
+                                timeline=timeline,
+                                transcript=transcript
+                            )
+                        }]
+                    )
+                    detailed_text = detailed_response.choices[0].message.content
+                    brief_text = brief_response.choices[0].message.content
 
             self.logger.debug("Summaries generated successfully.")
             return {
-                "detailed": detailed_response.choices[0].message.content,
-                "brief": brief_response.choices[0].message.content,
+                "detailed": detailed_text,
+                "brief": brief_text,
                 "timeline": timeline,
                 "transcript": transcript
             }
@@ -425,7 +556,7 @@ class VideoAnalyzer:
     def _concurrently_analyze_frames(self, frames: List[Frame]) -> List[Dict]:
         """Analyze frames concurrently to improve performance."""
         frame_descriptions = []
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             future_to_frame = {
                 executor.submit(self._analyze_frame, frame): frame for frame in frames
             }

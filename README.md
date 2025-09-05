@@ -104,6 +104,8 @@ from openscenesense import ModelConfig, AnalysisPrompts, VideoAnalyzer, DynamicF
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
+# Defaults use `gpt-4o` (vision), `gpt-4o-mini` (text), and `whisper-1` (audio for segment-rich transcripts).
+# Override below if you want different models.
 # Set up custom models and prompts
 custom_models = ModelConfig(
     vision_model="gpt-4o",           # Vision-capable model
@@ -159,9 +161,9 @@ from openscenesense import ModelConfig, AnalysisPrompts, OpenRouterAnalyzer, Dyn
 from os import getenv
 
 custom_models = ModelConfig(
-    vision_model="meta-llama/llama-3.2-90b-vision-instruct:free",
+    vision_model="qwen/qwen2.5-vl-32b-instruct:free",
     text_model="meta-llama/llama-3.2-3b-instruct:free",
-    audio_model="whisper-1"
+    audio_model="whisper-1"         
 )
 
 custom_prompts = AnalysisPrompts(
@@ -262,6 +264,8 @@ By leveraging powerful prompts and contextual tags, OpenSceneSense can provide i
 With prompt-driven analysis, OpenSceneSense can become your intelligent partner in interpreting video content, whether for content moderation, dataset creation, or building interactive applications that respond to visual and audio cues naturally.
 
 For a comprehensive list of innovative video analysis prompts, refer to the [Prompt Examples](docs/InnovativeVideoAnalysisPrompts.md).
+Note: By default, OpenSceneSense uses OpenAI's modern Responses API when available and
+falls back to Chat Completions automatically for compatibility (including OpenRouter).
 
 ## 📈 Applications
 
@@ -328,5 +332,3 @@ For questions, suggestions, or support, feel free to reach out:
 
 - **Email:** mahendrarohittigon@gmail.com
 - **GitHub Issues:** [OpenSceneSense Issues](https://github.com/ymrohit/openscenesense/issues)
-
-
