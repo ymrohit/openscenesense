@@ -19,6 +19,9 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python 3.10
@@ -40,10 +43,7 @@ jobs:
           print('openscenesense', oss.__version__)
           PY
       - name: Run integration matrix (if secrets set)
-        if: ${{ secrets.OPENAI_API_KEY && secrets.OPENROUTER_API_KEY }}
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        if: ${{ env.OPENAI_API_KEY != '' && env.OPENROUTER_API_KEY != '' }}
         run: |
           # Use the bundled videos for deterministic tests
           python tests/run_matrix.py
