@@ -27,7 +27,7 @@ dependencies = [
     "openai>=3.3.1,<4",
     "numpy>=2.0.2,<3",
     "opencv-python>=4.10.0,<6",
-    "Pillow>=11.0.0,<13",
+    "Pillow>=12.3.0,<13",
     "ffmpeg-python>=0.2.0,<0.3",
 ]
 
